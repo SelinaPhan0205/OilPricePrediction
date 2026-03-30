@@ -20,6 +20,7 @@ import requests
 import zipfile
 import io
 import os
+import shutil
 import time
 import json
 from datetime import datetime, timedelta
@@ -34,7 +35,7 @@ OUTPUT_FILE   = str(RAW_DIR / "gdelt_data.csv")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 START_DATE = "2015-01-01"
-TARGET_END_DATE = "2026-03-01"
+TARGET_END_DATE = "2026-03-20"
 END_DATE = min(datetime.today().strftime("%Y-%m-%d"), TARGET_END_DATE)
 
 # Country codes Trung Đông trong GDELT (ISO 3-letter)
@@ -342,8 +343,28 @@ if __name__ == "__main__":
     if "gdelt_goldstein" in result.columns:
         result["gdelt_goldstein_7d"] = result["gdelt_goldstein"].rolling(7, min_periods=1).mean()
 
+    # ========================================================================
+    # [BƯỚC 4: DATA TRANSFORMATION]
+    # Lưu ý: Rolling window aggregation ở trên (gdelt_tone_7d, gdelt_volume_7d, etc.)
+    # được tính ở bước crawl vì phải có đủ dữ liệu daily trước.
+    # Tuy nhiên, toàn bộ transformation logic sẽ được tập trung ở step4_transformation.py
+    # để dễ theo dõi và bảo trì.
+    # ========================================================================
+
     out = OUTPUT_FILE
-    result.to_csv(out)
+    
+    # Backup file cũ trước khi ghi đè (an toàn trong trường hợp interrupt)
+    if os.path.exists(out):
+        backup_path = out + f".backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        try:
+            shutil.copy2(out, backup_path)
+        except Exception as e:
+            print(f"⚠️  Lỗi khi backup: {e}")
+    
+    # Ghi sang temporary file trước, sau đó atomic rename
+    tmp_out = out + ".tmp"
+    result.to_csv(tmp_out)
+    os.replace(tmp_out, out)  # Atomic replace
 
     miss  = result.isnull().sum().sum()
     total = result.shape[0] * result.shape[1]

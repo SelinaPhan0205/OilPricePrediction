@@ -9,7 +9,7 @@ from pathlib import Path
 # =========================
 
 START_DATE = "2015-01-01"
-END_DATE = "2026-03-01"
+END_DATE = "2026-03-20"
 
 TICKERS = {
     "oil": "BZ=F",      # Brent oil

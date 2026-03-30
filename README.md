@@ -1,275 +1,232 @@
 # OIL PRICE PREDICTION PROJECT
-**Dự đoán biến động giá dầu dựa trên các yếu tố kinh tế, tài chính và địa chính trị**
+**Dự đoán biến động giá dầu bằng dữ liệu kinh tế, thị trường và địa chính trị**
 
 ---
 
-## 📋 Tổng quan
+## 1) Tổng quan
 
-Dự án này xây dựng mô hình Machine Learning nhằm **dự đoán biến động giá dầu** trên thị trường quốc tế, dựa trên 7 nguồn dữ liệu từ các tổ chức uy tín: ACLED, GDELT, FRED, EIA, và Yahoo Finance.
+Dự án xây dựng pipeline dữ liệu và mô hình để dự đoán biến động giá dầu (`oil_return`) từ nhiều nguồn:
 
-Giá dầu thô trên thị trường quốc tế chịu ảnh hưởng phức tạp từ ba nhóm yếu tố chính:
-- **Địa chính trị**: Xung đột quân sự, bất ổn chính trị ở Trung Đông (khu vực sản xuất 30% dầu thô toàn cầu)
-- **Kinh tế vĩ mô**: Lãi suất Fed, lạm phát, thất nghiệp, mong đợi tăng trưởng kinh tế
-- **Thị trường tài chính & Cung/Cầu thực tế**: USD Index, S&P 500, VIX, tồn kho dầu, sản lượng khai thác
+- **Địa chính trị thực địa**: ACLED (sự kiện xung đột, thương vong)
+- **Địa chính trị truyền thông**: GDELT (tone, goldstein, volume tin)
+- **Thị trường tài chính**: Yahoo Finance (USD, S&P500, VIX)
+- **Vĩ mô**: FRED (Fed Funds, CPI, Unemployment, Yield Spread)
+- **Cung/cầu dầu**: EIA (inventory, production, net imports)
 
----
-
-## 🎯 Mục tiêu
-
-1. **Tích hợp đa nguồn dữ liệu**: Thu thập, làm sạch, và kết hợp dữ liệu từ 7 nguồn khác nhau
-2. **Feature Engineering**: Tạo các biến thông tin có ý nghĩa từ dữ liệu thô
-3. **Xây dựng mô hình dự báo**: Sử dụng Machine Learning để dự đoán chiều biến động hoặc giá tuyệt đối
-4. **Phân tích yếu tố**: Xác định độ ảnh hưởng tương đối của từng nhóm yếu tố
+Mục tiêu chính là tạo bộ dữ liệu sạch, chống leakage, và đủ ổn định để đưa vào mô hình ML/Time-series.
 
 ---
 
-## 📊 Nguồn dữ liệu
+## 2) Trạng thái hiện tại (đã chạy xong)
 
-| Nhóm yếu tố | Nguồn | Series/Metrics | Giai đoạn | Tần suất |
-|---|---|---|---|---|
-| **Địa chính trị (thực tế)** | ACLED | Số sự kiện xung đột, Thương vong, Cường độ 7 ngày | 2015–2026/02 | Daily |
-| **Địa chính trị (truyền thông)** | GDELT | Sentiment tone, Goldstein scale, Volume tin tức | 2015–2026/02 | Daily |
-| **Giá dầu & Biến động** | Yahoo Finance | Brent/WTI Close, Return | 2015–2026/02 | Daily |
-| **Thị trường tài chính** | Yahoo Finance | USD Index, S&P 500, VIX | 2015–2026/02 | Daily |
-| **Kinh tế vĩ mô** | FRED | Fed Funds Rate, CPI, Unemployment, Yield Spread | 2015–2026/02 | Monthly/Daily |
-| **Cung/Cầu dầu** | EIA | Tồn kho dầu, Sản lượng khai thác, Nhập khẩu ròng | 2015–2026/02 | Weekly |
-
-**Quy mô dataset:**
-- **Số observations**: ~2.871 business days (loại bỏ thứ Bảy, Chủ Nhật, ngày lễ thị trường)
-- **Số features dự kiến**: ~37 (sau feature engineering)
-- **Giai đoạn train/test**: Training 2015–2023; Testing 2024–2026/02
+- `dataset_final.csv`: **2923 rows x 37 cols**
+- Không có **NaN/INF**
+- Train/Test split:
+  - Train: 2083 rows (2015-01-07 -> 2022-12-30)
+  - Test: 840 rows (2023-01-02 -> 2026-03-20)
+- Đã chạy kiểm tra chất lượng bằng `scripts/step6_quality_check.py`
 
 ---
 
-## 📁 Cấu trúc dự án
+## 3) Cấu trúc thư mục
 
-```
+```text
 OilPriceProject/
-│
-├── README.md                          # Tệp này
-├── requirements.txt                   # Thư viện Python cần thiết
-│
+├── README.md
+├── .gitignore
 ├── data/
-│   ├── raw/                           # Dữ liệu thô từ các nguồn
-│   │   ├── eia_data.csv              # EIA API crawl
-│   │   ├── fred_data.csv             # FRED API crawl
-│   │   ├── gdelt_data.csv            # GDELT file download
-│   │   ├── market_data.csv           # Yahoo Finance (Oil, USD, S&P500, VIX)
-│   │   └── acled_data.csv            # ACLED manual export (khi có)
-│   │
+│   ├── raw/
+│   │   ├── ACLED Data_2026-03-26.csv
+│   │   ├── eia_data.csv
+│   │   ├── fred_data.csv
+│   │   ├── gdelt_data.csv
+│   │   └── market_data.csv
 │   └── processed/
-│       ├── dataset_preprocessed.csv  # Sau cleaning & handling missing values
-│       ├── dataset_final.csv         # Sau merge & aligned dates
-│       └── dataset_final_full.csv    # Với tất cả features sau feature engineering
-│
+│       ├── dataset_preprocessed.csv
+│       ├── dataset_step2_cleaned.csv
+│       ├── dataset_step3_integrated.csv
+│       ├── dataset_step4_transformed.csv
+│       ├── dataset_final_full.csv
+│       └── dataset_final.csv
 ├── scripts/
-│   ├── crawl_macro_supply.py         # EIA & FRED API crawling
-│   ├── crawl_gdelt.py                # GDELT file downloading & parsing
-│   ├── ingest_data.py                # Load raw data & basic validation
-│   ├── preprocess_data.py            # Cleaning, handle missing values, align dates
-│   ├── feature_engineering.py        # Create lag, rolling, time-based features
-│   └── visualize_data.py             # EDA & correlation plots
-│
+│   ├── crawl_gdelt.py
+│   ├── crawl_macro_supply.py
+│   ├── ingest_data.py
+│   ├── preprocess_data.py
+│   ├── feature_engineering.py
+│   ├── visualize_data.py
+│   ├── step1_load_inspect.py
+│   ├── step2_cleaning.py
+│   ├── step3_integration.py
+│   ├── step4_transformation.py
+│   ├── step5_reduction.py
+│   └── step6_quality_check.py
 └── notebooks/
-    └── (sẽ thêm Jupyter notebooks cho analysis & modeling)
+    └── step4b_eda.ipynb
 ```
 
 ---
 
-## 🚀 Hướng dẫn cài đặt & Chạy
+## 4) Hướng dẫn nhanh
 
-### 1. Chuẩn bị môi trường
+### 4.1 Cài môi trường
 
 ```bash
-# Tạo virtual environment
 python -m venv .venv
-
-# Kích hoạt (Windows)
 .venv\Scripts\activate
-
-# Kích hoạt (macOS/Linux)
-source .venv/bin/activate
-
-# Cài đặt dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Thu thập dữ liệu
+### 4.2 Chạy full pipeline (khuyến nghị)
 
-#### 2.1 ACLED (thủ công)
-1. Truy cập [acleddata.com/data-export-tool](https://acleddata.com/conflict-data/data-export-tool)
-2. Filter: Khu vực = Trung Đông (Iraq, Iran, Saudi Arabia, Syria, Yemen, Israel, Palestine, Lebanon, Kuwait, UAE, Qatar, Bahrain, Oman, Jordan)
-3. Giai đoạn: 2015-01-01 đến 2026-02-27
-4. Export as CSV → lưu vào `data/raw/acled_data.csv`
-
-#### 2.2 FRED & EIA (API)
 ```bash
-# Cần API keys:
-# - FRED: https://fred.stlouisfed.org/docs/api/ (miễn phí)
-# - EIA: https://www.eia.gov/opendata/ (miễn phí)
+python scripts/step1_load_inspect.py
+python scripts/step2_cleaning.py
+python scripts/step3_integration.py
+python scripts/step4_transformation.py
+python scripts/step5_reduction.py
+python scripts/step6_quality_check.py
+```
 
+---
+
+## 5) Pipeline theo giai đoạn (dễ hiểu)
+
+### Giai đoạn A - Thu thập dữ liệu thô
+
+#### Bước A1: ACLED (thủ công)
+
+1. Vào: https://acleddata.com/conflict-data/data-export-tool
+2. Chọn khu vực Trung Đông (theo danh sách của đề tài)
+3. Chọn thời gian: 2015-01-01 đến hiện tại
+4. Export CSV vào `data/raw/` (đang dùng file `ACLED Data_2026-03-26.csv`)
+
+#### Bước A2: Crawl FRED + EIA
+
+```bash
 python scripts/crawl_macro_supply.py --fred-key YOUR_FRED_KEY --eia-key YOUR_EIA_KEY
 ```
 
-#### 2.3 Yahoo Finance & GDELT (tự động trong script)
+#### Bước A3: Crawl GDELT
+
+```bash
+python scripts/crawl_gdelt.py
+```
+
+#### Bước A4: Ingest dữ liệu thị trường
+
 ```bash
 python scripts/ingest_data.py
 ```
 
-### 3. Xử lý dữ liệu
+---
 
-```bash
-# Cleaning & alignment
-python scripts/preprocess_data.py
+### Giai đoạn B - Pipeline xử lý chính (Step 1 -> Step 6)
 
-# Feature engineering
-python scripts/feature_engineering.py
+#### Step 1 - Load & Inspect
 
-# EDA & Visualization
-python scripts/visualize_data.py
-```
+- Script: `scripts/step1_load_inspect.py`
+- Input: `data/raw/*.csv`
+- Mục tiêu:
+  - Kiểm tra shape, dtype, date range, missing
+  - Xác nhận dữ liệu đủ để vào cleaning
+- Output: in console
+
+#### Step 2 - Cleaning
+
+- Script: `scripts/step2_cleaning.py`
+- Input: dữ liệu raw
+- Mục tiêu:
+  - Fill missing theo từng nguồn
+  - Xử lý ACLED cuối tuần -> dồn vào ngày giao dịch
+  - Chuẩn hóa format ngày, bỏ duplicate
+- Output: `data/processed/dataset_step2_cleaned.csv`
+
+#### Step 3 - Integration
+
+- Script: `scripts/step3_integration.py`
+- Input: `dataset_step2_cleaned.csv`
+- Mục tiêu:
+  - Reindex business-day
+  - Merge đa nguồn vào một timeline thống nhất
+  - Kiểm tra redundancy cơ bản
+- Output: `data/processed/dataset_step3_integrated.csv`
+
+#### Step 4 - Transformation & Feature Engineering
+
+- Script: `scripts/step4_transformation.py`
+- Input: `dataset_step3_integrated.csv`
+- Mục tiêu:
+  - Tạo returns, rolling features, lag features, time features
+  - Tạo derived features (macro/supply/sentiment/conflict)
+  - Tạo `geopolitical_stress_index`
+  - Winsorize volatility
+- Output: `data/processed/dataset_step4_transformed.csv`
+
+#### Step 5 - Data Reduction (Aggressive)
+
+- Script: `scripts/step5_reduction.py`
+- Input: `dataset_step4_transformed.csv`
+- Mục tiêu:
+  - Giảm đa cộng tuyến mạnh
+  - Bỏ biến trung gian + biến nhiễu + biến raw không cần thiết
+- Output:
+  - `data/processed/dataset_final_full.csv` (giữ full)
+  - `data/processed/dataset_final.csv` (model-ready)
+
+**Kết quả hiện tại Step 5**
+- Giảm từ 54 cột xuống 33 cột
+- Tỷ lệ giữ lại: 68.5%
+
+#### Step 6 - Final Quality Check
+
+- Script: `scripts/step6_quality_check.py`
+- Input: `dataset_final.csv`
+- Mục tiêu:
+  - Kiểm tra NaN/INF
+  - Kiểm tra leakage
+  - In train/test split và sample dữ liệu
+- Output: báo cáo console cuối cùng trước modeling
 
 ---
 
-## 📈 Dòng xử lý dữ liệu (Pipeline)
+## 6) Tóm tắt feature sau reduction
 
-```
-Raw Data (7 sources)
-    ↓
-[ingest_data.py] Load & validate
-    ↓
-[preprocess_data.py] Clean, handle missing values, align dates
-    ↓
-Preprocessed Dataset (2.871 rows × 28 base features)
-    ↓
-[feature_engineering.py] Create lag, rolling, seasonal features
-    ↓
-Final Dataset (2.871 rows × ~37 features)
-    ↓
-[Modeling] (sẽ thêm trong giai đoạn tiếp theo)
-```
+Bộ dữ liệu model-ready hiện giữ các nhóm thông tin chính:
 
-### Các xử lý quan trọng:
-
-1. **Xử lý ngày cuối tuần**: Sự kiện xung đột xảy ra cuối tuần được gộp vào thứ Hai (ngày giao dịch tiếp theo)
-2. **Forward-fill cho dữ liệu thưa**: EIA (weekly) và FRED monthly được forward-fill, không nội suy
-3. **Handle missing values**:
-   - GDELT: 14 ngày có missing → forward-fill hoặc interpolation
-   - Các source khác: Không có missing values sau forward-fill
-4. **Standardization**: Các feature sẽ được chuẩn hóa (Z-score) trước khi đưa vào model
+- **Market/Returns**: `oil_return`, `usd_return`, `sp500_return`, `vix_return`, ...
+- **Macro**: `real_rate`, `fed_rate_change`, `yield_spread`, `cpi_lag`, `unemployment_lag`, `fed_rate_regime`
+- **Supply tương đối**: `inventory_zscore`, `production_change_pct`, `net_imports_change_pct`
+- **Sentiment/Conflict**: `gdelt_tone_7d`, `gdelt_tone_lag1`, `gdelt_volume_lag1`, `gdelt_goldstein`, `gdelt_goldstein_7d`, `geopolitical_stress_index`, `conflict_intensity_7d`, `fatalities_7d`
+- **Lag/Temporal**: `oil_return_lag1`, `oil_return_lag2`, `day_of_week`, `month`
 
 ---
 
-## 📊 Danh sách Features (cuối cùng dự kiến)
+## 7) Lưu ý quan trọng
 
-### Features gốc từ các nguồn (~28 features)
-
-**ACLED (3 features)**
-- `conflict_event_count`: Số sự kiện xung đột trong ngày
-- `fatalities`: Số thương vong
-- `conflict_intensity_7day`: Cường độ 7 ngày (rolling sum)
-
-**GDELT (9 features)**
-- `gdelt_tone`: Sentiment trung bình
-- `gdelt_goldstein`: Goldstein scale trung bình
-- `gdelt_volume`, `gdelt_events`: Khối lượng tin tức
-- `gdelt_tone_7d`, `gdelt_goldstein_7d`: Rolling 7-day average
-- `gdelt_tone_30d`, `gdelt_tone_spike`: Rolling 30-day + flag
-
-**Yahoo Finance - Oil (2 features)**
-- `oil_close_price`: Giá dầu đóng cửa
-- `oil_return`: Tỷ lệ thay đổi giá
-
-**Yahoo Finance - Markets (6 features)**
-- `usd_index_close`, `usd_return`
-- `sp500_close`, `sp500_return`
-- `vix_close`, `vix_return`
-
-**FRED (5 features)**
-- `fed_funds_rate`, `cpi`, `unemployment`: Macro indicators
-- `yield_spread`: Chênh lệch lãi suất 10Y–2Y
-- `wti_fred`: WTI giá từ FRED (cross-check)
-
-**EIA (4 features)**
-- `crude_inventory_weekly`: Tồn kho dầu
-- `crude_production_weekly`: Sản lượng khai thác
-- `net_imports_weekly`: Nhập khẩu ròng
-- `inventory_change_pct`: Thay đổi tồn kho (%)
-
-### Features Engineering (~8 features)
-
-**Lag features (2)**
-- `oil_return_lag1`, `oil_return_lag2`
-
-**Rolling features (3)**
-- `conflict_7d`: Tổng sự kiện 7 ngày
-- `fatalities_7d`: Tổng thương vong 7 ngày
-- `oil_volatility_7d`: Biến động 7 ngày
-
-**Temporal features (2)**
-- `day_of_week`: Thứ trong tuần
-- `month`: Tháng trong năm
+- Dự án dự đoán **`oil_return`** (biến động), không phải trực tiếp giá tuyệt đối.
+- Khi train mô hình, nên ưu tiên dùng biến **lag/return/change** để hạn chế leakage và non-stationary risk.
+- Step 6 hiện cảnh báo khả năng leakage cho một số biến same-day (`vix_close`, `usd_close`, `sp500_close`); khi modeling có thể dùng phiên bản lag nếu muốn nghiêm ngặt hơn.
 
 ---
 
-## ⚠️ Ghi chú quan trọng
+## 8) Notebook EDA
 
-1. **Data Leakage phòng chống**: FRED monthly data được shift 1 tháng trước khi merge, tránh model thấy trước thông tin chưa công bố
-2. **Outlier thực tế**: `wti_fred` có giá trị -36.98 vào 20/4/2020 — đây là sự kiện thực có thật (lần đầu tiên giá dầu âm trong lịch sử), không phải lỗi dữ liệu, sẽ giữ nguyên
-3. **Multicollinearity**: `wti_fred` có correlation > 0.99 với `oil_close_price`, sẽ xem xét bỏ bớt hoặc giữ để cross-check
-4. **Seasonality**: Nhu cầu dầu tăng vào mùa đông và mùa lái xe hè — `month` feature sẽ giúp nắm bắt điều này
+- Notebook chính: `notebooks/step4b_eda.ipynb`
+- Nội dung: target analysis, ADF, ACF/PACF, correlation, VIF, rolling correlation, outlier analysis, summary table.
 
 ---
 
-## 📝 Giai đoạn dự kiến
+## 9) Tài liệu tham khảo
 
-- [x] Thu thập & làm sạch dữ liệu
-- [x] Preprocessing & merge datasets
-- [ ] Feature engineering & EDA chi tiết
-- [ ] Train-test split & model selection
-- [ ] Xây dựng & tuning mô hình
-- [ ] Evaluating & Feature importance analysis
-- [ ] Visualize kết quả & viết báo cáo
+- ACLED: https://acleddata.com/
+- GDELT: https://www.gdeltproject.org/
+- FRED: https://fred.stlouisfed.org/
+- EIA: https://www.eia.gov/
+- Yahoo Finance: https://finance.yahoo.com/
 
 ---
 
-## 🛠️ Công nghệ sử dụng
+## 10) Cập nhật gần nhất
 
-- **Python 3.8+**
-- **pandas**: Data manipulation & preprocessing
-- **numpy**: Numerical computing
-- **scikit-learn**: Machine Learning models
-- **matplotlib & seaborn**: Data visualization
-- **requests & yfinance**: API calls & web scraping
-- **jupyter**: Interactive notebooks (sắp tới)
-
----
-
-## 📚 Tài liệu tham khảo
-
-- [ACLED - Armed Conflict Location & Event Data Project](https://acleddata.com/)
-- [GDELT - Global Database of Events, Language, and Tone](https://www.gdeltproject.org/)
-- [FRED - Federal Reserve Economic Data](https://fred.stlouisfed.org/)
-- [EIA - U.S. Energy Information Administration](https://www.eia.gov/)
-- [Yahoo Finance](https://finance.yahoo.com/)
-
----
-
-## 👤 Tác giả
-
-**Team OilPriceProject**  
-Khóa KTDLUD, Đại học [Tên ĐH]
-
----
-
-## 📄 License
-
-MIT License - Sử dụng tự do cho mục đích học tập và nghiên cứu
-
----
-
-## 📧 Liên hệ & Hỗ trợ
-
-Nếu có câu hỏi hoặc góp ý, vui lòng liên hệ hoặc mở issue trong repository.
-
-**Last Updated**: 2026-03-23
+- Last Updated: **2026-03-30**

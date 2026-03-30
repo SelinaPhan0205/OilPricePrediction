@@ -1,7 +1,7 @@
 """
 Script crawl dữ liệu bổ sung cho đồ án Dự đoán Giá Dầu
 Nguồn: FRED, EIA
-Giai đoạn output: 2015-01-01 đến 2026-03-01
+Giai đoạn output: 2015-01-01 đến 2026-03-20 (crawl lùi về 2013-12-01 để đủ lịch sử tính YoY)
 
 Cài đặt thư viện trước khi chạy:
     pip install pandas requests fredapi
@@ -25,7 +25,7 @@ EIA_API_KEY  = "3sFfSfhcUvNA9HwKAGmgAJeB9ZQqn1Yo6TY6sAnX"    # https://www.eia.g
 # Crawl lùi 13 tháng để đủ lịch sử tính YoY chuẩn ngay từ giai đoạn đầu output.
 CRAWL_START_DATE  = "2013-12-01"
 OUTPUT_START_DATE = "2015-01-01"
-END_DATE          = "2026-03-01"
+END_DATE          = "2026-03-20"
 BASE_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = BASE_DIR / "data/raw"
 RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,6 +106,13 @@ def fetch_fred_data(api_key: str, start: str, end: str) -> pd.DataFrame:
     result = result.ffill()
     result = result.loc[result.index <= end]
     result.index.name = "date"
+    
+    # ========================================================================
+    # [BƯỚC 2: DATA CLEANING] 
+    # Lưu ý: Phần ffill ở trên làm ở bước crawl để thích hợp với những tần suất khác nhau_FRED monthly, EIA weekly)
+    # Phần ffill này sẽ được xử lý thêm ở step2_cleaning.py khi merge với business day index
+    # ========================================================================
+    
     return result
 
 
