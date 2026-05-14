@@ -1,8 +1,17 @@
-# ingest_data.py
+"""Download core market data.
 
-import yfinance as yf
-import pandas as pd
+Defaults preserve the original 2015-2026 raw file.  Long-history experiments can
+pass --start/--end/--output to write a separate branch file.
+"""
+
+from __future__ import annotations
+
+import argparse
+import time
 from pathlib import Path
+
+import pandas as pd
+import yfinance as yf
 
 # =========================
 # CONFIG
@@ -21,13 +30,28 @@ TICKERS = {
 BASE_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = BASE_DIR / "data/raw"
 RAW_DIR.mkdir(parents=True, exist_ok=True)
+DEFAULT_OUTPUT = RAW_DIR / "market_data.csv"
 
 
 # =========================
 # DOWNLOAD MARKET DATA
 # =========================
 
-def download_market_data():
+def flatten_close(raw: pd.DataFrame, name: str) -> pd.DataFrame:
+    if raw.empty:
+        return pd.DataFrame(columns=["date", f"{name}_close"])
+
+    close = raw["Close"]
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+
+    out = close.rename(f"{name}_close").reset_index()
+    out.rename(columns={"Date": "date"}, inplace=True)
+    out["date"] = pd.to_datetime(out["date"]).dt.tz_localize(None)
+    return out[["date", f"{name}_close"]]
+
+
+def download_market_data(start: str, end: str):
 
     dfs = []
 
@@ -35,24 +59,33 @@ def download_market_data():
 
         print(f"Downloading {name} ({ticker})...")
 
-        df = yf.download(
+        raw = yf.download(
             ticker,
-            start=START_DATE,
-            end=END_DATE,
-            progress=False
+            start=start,
+            end=end,
+            progress=False,
+            auto_adjust=False,
         )
 
-        df = df[["Close"]]
-        df.columns = [f"{name}_close"]
+        dfs.append(flatten_close(raw, name))
+        time.sleep(0.25)
 
-        dfs.append(df)
+    if not dfs:
+        return pd.DataFrame(columns=["date"])
 
-    market_df = pd.concat(dfs, axis=1, sort=False)
+    market_df = dfs[0]
+    for frame in dfs[1:]:
+        market_df = market_df.merge(frame, on="date", how="outer")
 
-    market_df.reset_index(inplace=True)
-    market_df.rename(columns={"Date": "date"}, inplace=True)
+    return market_df.sort_values("date").reset_index(drop=True)
 
-    return market_df
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--start", default=START_DATE)
+    parser.add_argument("--end", default=END_DATE)
+    parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
+    return parser.parse_args()
 
 
 # =========================
@@ -60,12 +93,14 @@ def download_market_data():
 # =========================
 
 def main():
+    args = parse_args()
+    market = download_market_data(args.start, args.end)
 
-    market = download_market_data()
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    market.to_csv(output, index=False)
 
-    market.to_csv(RAW_DIR / "market_data.csv", index=False)
-
-    print("Data ingestion complete.")
+    print(f"Data ingestion complete: {output} ({market.shape[0]} rows x {market.shape[1]} cols)")
 
 
 if __name__ == "__main__":

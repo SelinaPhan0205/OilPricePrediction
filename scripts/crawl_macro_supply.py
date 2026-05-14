@@ -11,6 +11,7 @@ import pandas as pd
 import requests
 import time
 import os
+import argparse
 from datetime import datetime, timedelta
 from pathlib import Path
 import warnings
@@ -30,6 +31,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = BASE_DIR / "data/raw"
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR = str(RAW_DIR)
+DEFAULT_FRED_OUTPUT = RAW_DIR / "fred_data.csv"
+DEFAULT_EIA_OUTPUT = RAW_DIR / "eia_data.csv"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -92,6 +95,21 @@ def fetch_fred_data(api_key: str, start: str, end: str) -> pd.DataFrame:
 
         except Exception as e:
             print(f"  [FRED] ⚠️  Lỗi khi lấy {series_id}: {e}")
+            try:
+                print(f"  [FRED] Fallback fredgraph.csv cho {series_id}...")
+                fallback_url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
+                df = pd.read_csv(fallback_url)
+                df.rename(columns={"observation_date": "date", series_id: cfg["name"]}, inplace=True)
+                df = df[["date", cfg["name"]]]
+                df["date"] = pd.to_datetime(df["date"])
+                df[cfg["name"]] = pd.to_numeric(df[cfg["name"]], errors="coerce")
+                mask = (df["date"] >= pd.Timestamp(start)) & (df["date"] <= pd.Timestamp(end))
+                df = df.loc[mask].set_index("date")
+                if cfg["freq"] == "monthly":
+                    df.index = df.index + pd.DateOffset(months=1)
+                dfs.append(df)
+            except Exception as fallback_error:
+                print(f"  [FRED] ⚠️  Fallback cũng lỗi cho {series_id}: {fallback_error}")
 
     if not dfs:
         return pd.DataFrame()
@@ -114,6 +132,14 @@ def fetch_fred_data(api_key: str, start: str, end: str) -> pd.DataFrame:
     # ========================================================================
     
     return result
+
+
+def trim_output_window(df: pd.DataFrame, output_start: str, end: str) -> pd.DataFrame:
+    if df.empty:
+        return df
+    start_ts = pd.Timestamp(output_start)
+    end_ts = pd.Timestamp(end)
+    return df.loc[(df.index >= start_ts) & (df.index <= end_ts)].copy()
 
 
 # ============================================================
@@ -205,14 +231,25 @@ def fetch_eia_data(api_key: str, start: str, end: str) -> pd.DataFrame:
     return result
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--crawl-start", default=CRAWL_START_DATE)
+    parser.add_argument("--output-start", default=OUTPUT_START_DATE)
+    parser.add_argument("--end", default=END_DATE)
+    parser.add_argument("--fred-output", default=str(DEFAULT_FRED_OUTPUT))
+    parser.add_argument("--eia-output", default=str(DEFAULT_EIA_OUTPUT))
+    return parser.parse_args()
+
+
 # ============================================================
 # 🚀 MAIN - Chạy tất cả
 # ============================================================
 if __name__ == "__main__":
+    args = parse_args()
     print("=" * 60)
     print("🛢️  Crawl dữ liệu bổ sung cho đồ án Dự đoán Giá Dầu")
-    print(f"   Crawl range : {CRAWL_START_DATE} → {END_DATE}")
-    print(f"   Output range: {OUTPUT_START_DATE} → {END_DATE}")
+    print(f"   Crawl range : {args.crawl_start} -> {args.end}")
+    print(f"   Output range: {args.output_start} -> {args.end}")
     print("=" * 60)
 
     all_dfs = {}
@@ -220,9 +257,11 @@ if __name__ == "__main__":
     # --- FRED ---
     if FRED_API_KEY != "YOUR_FRED_API_KEY":
         print("\n📊 [1/2] Crawl FRED...")
-        fred_df = fetch_fred_data(FRED_API_KEY, CRAWL_START_DATE, END_DATE)
+        fred_df = fetch_fred_data(FRED_API_KEY, args.crawl_start, args.end)
+        fred_df = trim_output_window(fred_df, args.output_start, args.end)
         if not fred_df.empty:
-            path = os.path.join(OUTPUT_DIR, "fred_data.csv")
+            path = Path(args.fred_output)
+            path.parent.mkdir(parents=True, exist_ok=True)
             fred_df.to_csv(path)
             print(f"  ✅ Lưu {path} — {len(fred_df)} rows, {len(fred_df.columns)} cols")
             print(f"  Columns: {list(fred_df.columns)}")
@@ -233,9 +272,11 @@ if __name__ == "__main__":
     # --- EIA ---
     if EIA_API_KEY != "YOUR_EIA_API_KEY":
         print("\n🏭 [2/2] Crawl EIA...")
-        eia_df = fetch_eia_data(EIA_API_KEY, CRAWL_START_DATE, END_DATE)
+        eia_df = fetch_eia_data(EIA_API_KEY, args.crawl_start, args.end)
+        eia_df = trim_output_window(eia_df, args.output_start, args.end)
         if not eia_df.empty:
-            path = os.path.join(OUTPUT_DIR, "eia_data.csv")
+            path = Path(args.eia_output)
+            path.parent.mkdir(parents=True, exist_ok=True)
             eia_df.to_csv(path)
             print(f"  ✅ Lưu {path} — {len(eia_df)} rows, {len(eia_df.columns)} cols")
             print(f"  Columns: {list(eia_df.columns)}")

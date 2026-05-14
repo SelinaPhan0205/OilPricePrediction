@@ -1,232 +1,151 @@
-# OIL PRICE PREDICTION PROJECT
-**Dự đoán biến động giá dầu bằng dữ liệu kinh tế, thị trường và địa chính trị**
+# Oil Price Prediction
 
----
+Daily crude-oil direction prediction using market, macro, supply, and geopolitical signals.
 
-## 1) Tổng quan
+The current project target is **daily T -> T+1 oil return direction**.
+For review/submission, start with `final_results/`; it contains the final model artifacts, final reports, and compact metadata files.
 
-Dự án xây dựng pipeline dữ liệu và mô hình để dự đoán biến động giá dầu (`oil_return`) từ nhiều nguồn:
+- Target column: `oil_return_fwd1`
+- Target rule: `oil_return_fwd1 > 0`
+- Target date column: `oil_return_fwd1_date`
+- Main final model artifact: `ml/classification/results_daily_selected_model_v1/selected_daily_model.joblib`
 
-- **Địa chính trị thực địa**: ACLED (sự kiện xung đột, thương vong)
-- **Địa chính trị truyền thông**: GDELT (tone, goldstein, volume tin)
-- **Thị trường tài chính**: Yahoo Finance (USD, S&P500, VIX)
-- **Vĩ mô**: FRED (Fed Funds, CPI, Unemployment, Yield Spread)
-- **Cung/cầu dầu**: EIA (inventory, production, net imports)
+Weekly experiments are kept as background analysis only. The main deliverable is the daily classification workflow.
 
-Mục tiêu chính là tạo bộ dữ liệu sạch, chống leakage, và đủ ổn định để đưa vào mô hình ML/Time-series.
+## Current Final Result
 
----
+Best saved daily model:
 
-## 2) Trạng thái hiện tại (đã chạy xong)
+| Item | Value |
+| --- | --- |
+| Model | `LGBMClassifier` |
+| Feature count | 13 |
+| Added regime features | `ovx_high_regime_lag1`, `yield_10y_3y_change_lag1_slog1p`, `oil_high_vol_regime_lag1` |
+| Test split | from `2023-01-01` onward |
+| Test accuracy | `0.5548` |
+| Test F1 macro | `0.5442` |
+| Test ROC-AUC | `0.5697` |
 
-- `dataset_final.csv`: **2923 rows x 37 cols**
-- Không có **NaN/INF**
-- Train/Test split:
-  - Train: 2083 rows (2015-01-07 -> 2022-12-30)
-  - Test: 840 rows (2023-01-02 -> 2026-03-20)
-- Đã chạy kiểm tra chất lượng bằng `scripts/step6_quality_check.py`
+Artifacts:
 
----
+- `ml/classification/results_daily_selected_model_v1/selected_daily_model.joblib`
+- `ml/classification/results_daily_selected_model_v1/selected_daily_model_metrics.csv`
+- `ml/classification/results_daily_selected_model_v1/selected_daily_model_features.csv`
+- `ml/classification/results_daily_selected_model_v1/selected_daily_model_predictions.csv`
+- `ml/classification/results_daily_selected_model_v1/selected_daily_model_summary.md`
 
-## 3) Cấu trúc thư mục
+The same files are copied into `final_results/model/` so the final deliverable is easy to find.
+
+## Repository Layout
 
 ```text
-OilPriceProject/
-├── README.md
-├── .gitignore
-├── data/
-│   ├── raw/
-│   │   ├── ACLED Data_2026-03-26.csv
-│   │   ├── eia_data.csv
-│   │   ├── fred_data.csv
-│   │   ├── gdelt_data.csv
-│   │   └── market_data.csv
-│   └── processed/
-│       ├── dataset_preprocessed.csv
-│       ├── dataset_step2_cleaned.csv
-│       ├── dataset_step3_integrated.csv
-│       ├── dataset_step4_transformed.csv
-│       ├── dataset_final_full.csv
-│       └── dataset_final.csv
-├── scripts/
-│   ├── crawl_gdelt.py
-│   ├── crawl_macro_supply.py
-│   ├── ingest_data.py
-│   ├── preprocess_data.py
-│   ├── feature_engineering.py
-│   ├── visualize_data.py
-│   ├── step1_load_inspect.py
-│   ├── step2_cleaning.py
-│   ├── step3_integration.py
-│   ├── step4_transformation.py
-│   ├── step5_reduction.py
-│   └── step6_quality_check.py
-└── notebooks/
-    └── step4b_eda.ipynb
+data/
+  raw/                         # Source market, macro, supply, GDELT, and extended regime data
+  processed/                   # Final leakage-safe model datasets kept for reproducibility
+docs/
+  summary/                     # Stable pipeline summaries
+  FINAL_DAILY_WEEKLY_MODEL_METHOD_2026-05-14.md
+  MODEL_EXPERIMENT_HISTORY_DAILY_WEEKLY_LONG_DATA_2026-05-14.md
+  OLD_VS_NEW_DATA_RESULTS_2026-05-14.md
+ml/
+  classification/              # Daily classification workflow
+  regression/                  # Legacy regression workflow
+scripts/
+  step1_load_inspect.py        # Main preprocessing pipeline
+  step2_cleaning.py
+  step3_integration.py
+  step4_transformation.py
+  step4b_fix_leakage.py
+  step5b_processing.py
+  step6_quality_check.py
+  ingest_ext_market_regime.py
+  build_ext_market_regime_dataset.py
+  train_daily_selected_model.py
 ```
 
----
+## Setup
 
-## 4) Hướng dẫn nhanh
+Create a local environment:
 
-### 4.1 Cài môi trường
-
-```bash
+```powershell
 python -m venv .venv
-.venv\Scripts\activate
+.\.venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4.2 Chạy full pipeline (khuyến nghị)
+Python 3.10+ is recommended. The final saved artifact was produced on Windows.
 
-```bash
-python scripts/step1_load_inspect.py
-python scripts/step2_cleaning.py
-python scripts/step3_integration.py
-python scripts/step4_transformation.py
-python scripts/step5_reduction.py
-python scripts/step6_quality_check.py
+## Data Pipeline
+
+Run the maintained preprocessing chain:
+
+```powershell
+python scripts\step1_load_inspect.py
+python scripts\step2_cleaning.py
+python scripts\step3_integration.py
+python scripts\step4_transformation.py
+python scripts\step4b_fix_leakage.py
+python scripts\step5b_processing.py
+python scripts\step6_quality_check.py
 ```
 
----
+Build the extended market/regime dataset used by the final selected model:
 
-## 5) Pipeline theo giai đoạn (dễ hiểu)
-
-### Giai đoạn A - Thu thập dữ liệu thô
-
-#### Bước A1: ACLED (thủ công)
-
-1. Vào: https://acleddata.com/conflict-data/data-export-tool
-2. Chọn khu vực Trung Đông (theo danh sách của đề tài)
-3. Chọn thời gian: 2015-01-01 đến hiện tại
-4. Export CSV vào `data/raw/` (đang dùng file `ACLED Data_2026-03-26.csv`)
-
-#### Bước A2: Crawl FRED + EIA
-
-```bash
-python scripts/crawl_macro_supply.py --fred-key YOUR_FRED_KEY --eia-key YOUR_EIA_KEY
+```powershell
+python scripts\ingest_ext_market_regime.py
+python scripts\build_ext_market_regime_dataset.py
 ```
 
-#### Bước A3: Crawl GDELT
+Key processed files kept in the repository:
 
-```bash
-python scripts/crawl_gdelt.py
+- `data/processed/dataset_final_noleak_processed.csv`
+- `data/processed/dataset_step4_noleak.csv`
+- `data/processed/dataset_final_noleak_ext_market_regime_v1.csv`
+- `data/processed/dataset_final_noleak_ext_market_regime_v1_features.csv`
+- `data/processed/dataset_final_noleak_ext_market_regime_v1_report.json`
+
+## Training The Final Daily Model
+
+Run:
+
+```powershell
+python scripts\train_daily_selected_model.py
 ```
 
-#### Bước A4: Ingest dữ liệu thị trường
+Or use the helper runner:
 
-```bash
-python scripts/ingest_data.py
+```powershell
+.\scripts\run_daily_training.ps1
 ```
 
----
+The training script reads:
 
-### Giai đoạn B - Pipeline xử lý chính (Step 1 -> Step 6)
+- `data/processed/dataset_final_noleak_ext_market_regime_v1.csv`
+- `data/processed/dataset_step4_noleak.csv`
+- `ml/classification/results_step5b_v2/step5_selected_features.csv`
+- `data/processed/dataset_final_noleak_ext_market_regime_v1_features.csv`
 
-#### Step 1 - Load & Inspect
+and writes the selected model artifacts to:
 
-- Script: `scripts/step1_load_inspect.py`
-- Input: `data/raw/*.csv`
-- Mục tiêu:
-  - Kiểm tra shape, dtype, date range, missing
-  - Xác nhận dữ liệu đủ để vào cleaning
-- Output: in console
+```text
+ml/classification/results_daily_selected_model_v1/
+```
 
-#### Step 2 - Cleaning
+## Reports
 
-- Script: `scripts/step2_cleaning.py`
-- Input: dữ liệu raw
-- Mục tiêu:
-  - Fill missing theo từng nguồn
-  - Xử lý ACLED cuối tuần -> dồn vào ngày giao dịch
-  - Chuẩn hóa format ngày, bỏ duplicate
-- Output: `data/processed/dataset_step2_cleaned.csv`
+Final report files:
 
-#### Step 3 - Integration
+- `docs/FINAL_DAILY_WEEKLY_MODEL_METHOD_2026-05-14.md`
+- `docs/MODEL_EXPERIMENT_HISTORY_DAILY_WEEKLY_LONG_DATA_2026-05-14.md`
+- `docs/OLD_VS_NEW_DATA_RESULTS_2026-05-14.md`
+- `docs/summary/CLASSIFICATION_FINAL_PIPELINE.md`
+- `docs/summary/PROCESSING_PIPELINE.md`
+- `docs/summary/EDA_CLASSIFICATION_PIPELINE.md`
 
-- Script: `scripts/step3_integration.py`
-- Input: `dataset_step2_cleaned.csv`
-- Mục tiêu:
-  - Reindex business-day
-  - Merge đa nguồn vào một timeline thống nhất
-  - Kiểm tra redundancy cơ bản
-- Output: `data/processed/dataset_step3_integrated.csv`
+Planning notes, private agent files, cache folders, and temporary experiment outputs are ignored by Git. They can remain in the local workspace for audit/history, but the final deliverable is the compact `final_results/` folder plus the maintained source code and reproducible data files listed above.
 
-#### Step 4 - Transformation & Feature Engineering
+## Notes
 
-- Script: `scripts/step4_transformation.py`
-- Input: `dataset_step3_integrated.csv`
-- Mục tiêu:
-  - Tạo returns, rolling features, lag features, time features
-  - Tạo derived features (macro/supply/sentiment/conflict)
-  - Tạo `geopolitical_stress_index`
-  - Winsorize volatility
-- Output: `data/processed/dataset_step4_transformed.csv`
-
-#### Step 5 - Data Reduction (Aggressive)
-
-- Script: `scripts/step5_reduction.py`
-- Input: `dataset_step4_transformed.csv`
-- Mục tiêu:
-  - Giảm đa cộng tuyến mạnh
-  - Bỏ biến trung gian + biến nhiễu + biến raw không cần thiết
-- Output:
-  - `data/processed/dataset_final_full.csv` (giữ full)
-  - `data/processed/dataset_final.csv` (model-ready)
-
-**Kết quả hiện tại Step 5**
-- Giảm từ 54 cột xuống 33 cột
-- Tỷ lệ giữ lại: 68.5%
-
-#### Step 6 - Final Quality Check
-
-- Script: `scripts/step6_quality_check.py`
-- Input: `dataset_final.csv`
-- Mục tiêu:
-  - Kiểm tra NaN/INF
-  - Kiểm tra leakage
-  - In train/test split và sample dữ liệu
-- Output: báo cáo console cuối cùng trước modeling
-
----
-
-## 6) Tóm tắt feature sau reduction
-
-Bộ dữ liệu model-ready hiện giữ các nhóm thông tin chính:
-
-- **Market/Returns**: `oil_return`, `usd_return`, `sp500_return`, `vix_return`, ...
-- **Macro**: `real_rate`, `fed_rate_change`, `yield_spread`, `cpi_lag`, `unemployment_lag`, `fed_rate_regime`
-- **Supply tương đối**: `inventory_zscore`, `production_change_pct`, `net_imports_change_pct`
-- **Sentiment/Conflict**: `gdelt_tone_7d`, `gdelt_tone_lag1`, `gdelt_volume_lag1`, `gdelt_goldstein`, `gdelt_goldstein_7d`, `geopolitical_stress_index`, `conflict_intensity_7d`, `fatalities_7d`
-- **Lag/Temporal**: `oil_return_lag1`, `oil_return_lag2`, `day_of_week`, `month`
-
----
-
-## 7) Lưu ý quan trọng
-
-- Dự án dự đoán **`oil_return`** (biến động), không phải trực tiếp giá tuyệt đối.
-- Khi train mô hình, nên ưu tiên dùng biến **lag/return/change** để hạn chế leakage và non-stationary risk.
-- Step 6 hiện cảnh báo khả năng leakage cho một số biến same-day (`vix_close`, `usd_close`, `sp500_close`); khi modeling có thể dùng phiên bản lag nếu muốn nghiêm ngặt hơn.
-
----
-
-## 8) Notebook EDA
-
-- Notebook chính: `notebooks/step4b_eda.ipynb`
-- Nội dung: target analysis, ADF, ACF/PACF, correlation, VIF, rolling correlation, outlier analysis, summary table.
-
----
-
-## 9) Tài liệu tham khảo
-
-- ACLED: https://acleddata.com/
-- GDELT: https://www.gdeltproject.org/
-- FRED: https://fred.stlouisfed.org/
-- EIA: https://www.eia.gov/
-- Yahoo Finance: https://finance.yahoo.com/
-
----
-
-## 10) Cập nhật gần nhất
-
-- Last Updated: **2026-03-30**
+- This is a weak-signal daily financial classification task. The reported metrics should be interpreted as modest directional edge, not high-confidence price prediction.
+- Validation uses chronological splits. Do not use random splits for headline results.
+- Same-day and future-derived columns must be checked carefully before modeling to avoid leakage.

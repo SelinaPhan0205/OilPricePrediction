@@ -1,0 +1,2 @@
+target,target_rule,split_date,train_rows,test_rows,top_ext_k,n_features,accuracy,f1_macro,auc,pred_up_rate,tp,fp,tn,fn
+oil_return_fwd1,oil_return_fwd1 > 0,2023-01-01,2032,840,3,13,0.5547619047619048,0.5441777323799796,0.5697067960724733,0.35,169,125,297,249

@@ -1,0 +1,12 @@
+pandas
+numpy
+scikit-learn
+lightgbm
+xgboost
+joblib
+matplotlib
+seaborn
+statsmodels
+yfinance
+requests
+fredapi

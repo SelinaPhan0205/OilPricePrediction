@@ -1,2 +1,0 @@
-Model,Selected_On,CV_Acc,Val_Accuracy,Val_F1_macro,Val_AUC,Holdout_Accuracy,Holdout_F1_macro,Holdout_AUC,Params
-GBM,validation,0.5233898305084745,0.5269230769230769,0.5095016794736116,0.5652225378787878,0.5119047619047619,0.46772667981379706,0.5281695730061907,"{'subsample': 1.0, 'n_estimators': 500, 'min_samples_split': 20, 'min_samples_leaf': 20, 'max_features': 'sqrt', 'max_depth': 5, 'learning_rate': 0.005}"

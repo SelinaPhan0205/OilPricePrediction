@@ -1,9 +1,60 @@
-.claude
-echo
-__pycache__/
-__pycache__
+# Local environments and caches
 .venv/
-__pycache__/**
-**/__pycache__/**
+.env
+__pycache__/
+**/__pycache__/
+.cache/
+.pytest_cache/
 other_eda_preprocess/
+bertviz/
+echo
+
+# Agent/private workspace files
+.agents/
+.codex
+.claude/
+AGENTS.md
 CODEX_HANDOFF_*.md
+
+# Temporary generated data
+data/raw/*backup*
+data/raw/*_2007_2026*.csv
+data/processed/dataset_step*.csv
+data/processed/dataset_final.csv
+data/processed/dataset_preprocessed.csv
+data/processed/dataset_final_full.csv
+data/processed/dataset_final_noleak.csv
+data/processed/dataset_final_noleak_step5c_*
+data/processed/*_2007_2026*.csv
+data/processed/*_2007_2026*
+data/processed/*pipeline_report.json
+data/processed/*processing_report*.csv
+
+# Intermediate experiment outputs
+ml/results/
+ml/regression/results/
+outputs/
+eda_classification/
+ml/classification/final/results*/
+ml/classification/results_*/
+!ml/classification/results_step5b_v2/
+!ml/classification/results_step5b_v2/**
+!ml/classification/results_daily_selected_model_v1/
+!ml/classification/results_daily_selected_model_v1/**
+
+# Planning notes; keep final reports only
+docs/*PLAN*.md
+docs/*SESSION_SUMMARY*.md
+docs/*BENCHMARK*.md
+docs/WEEKLY_ROLLING_IMPROVEMENT_*.md
+docs/CURRENT_VS_OTHER_*.md
+docs/EXPERIMENTS.md
+docs/ML_REPORT.md
+docs/OTHER_*.md
+docs/PRESENTATION_*.md
+
+# Local experiment-only scripts
+scripts/evaluate_*.py
+scripts/*weekly*.py
+scripts/build_daily_long_no_acled_pipeline.py
+scripts/probe_ext_market_regime_selected_features.py

@@ -1,0 +1,28 @@
+feature,source,family,availability
+ovx_return_slog1p,ovx_close,extended_market,EOD T or lagged; no future target data
+ovx_return_lag1_slog1p,ovx_close,extended_market,EOD T or lagged; no future target data
+ovx_level_lag1_log1p,ovx_close,extended_market,EOD T or lagged; no future target data
+ovx_high_regime_lag1,ovx_close,extended_market,EOD T or lagged; no future target data
+ovx_extreme_regime_lag1,ovx_close,extended_market,EOD T or lagged; no future target data
+move_return_slog1p,move_close,extended_market,EOD T or lagged; no future target data
+move_return_lag1_slog1p,move_close,extended_market,EOD T or lagged; no future target data
+move_level_lag1_log1p,move_close,extended_market,EOD T or lagged; no future target data
+move_high_regime_lag1,move_close,extended_market,EOD T or lagged; no future target data
+move_extreme_regime_lag1,move_close,extended_market,EOD T or lagged; no future target data
+gold_return_slog1p,gold_close,extended_market,EOD T or lagged; no future target data
+gold_return_lag1_slog1p,gold_close,extended_market,EOD T or lagged; no future target data
+gold_level_lag1_log1p,gold_close,extended_market,EOD T or lagged; no future target data
+dgs3_lag1,dgs3,yield_curve,lagged daily FRED series
+dgs3_change_lag1_slog1p,dgs3,yield_curve,lagged daily FRED series
+dgs10_lag1,dgs10,yield_curve,lagged daily FRED series
+dgs10_change_lag1_slog1p,dgs10,yield_curve,lagged daily FRED series
+yield_10y_3y_lag1,dgs10-dgs3,yield_curve,lagged daily FRED series
+yield_10y_3y_change_lag1_slog1p,dgs10-dgs3,yield_curve,lagged daily FRED series
+oil_momentum_5d_lag1,base_processed_returns,regime,lagged rolling calculation
+oil_momentum_20d_lag1,base_processed_returns,regime,lagged rolling calculation
+oil_realized_vol_5d_lag1,base_processed_returns,regime,lagged rolling calculation
+oil_realized_vol_20d_lag1,base_processed_returns,regime,lagged rolling calculation
+oil_uptrend_5d_lag1,base_processed_returns,regime,lagged rolling calculation
+oil_uptrend_20d_lag1,base_processed_returns,regime,lagged rolling calculation
+oil_high_vol_regime_lag1,base_processed_returns,regime,lagged rolling calculation
+risk_off_cross_asset_lag1,base_processed_returns,regime,lagged rolling calculation
